@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: libretranslate-marathi
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: standard
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: LT_LOAD_ONLY
+        value: en,mr
+      - key: LT_DISABLE_FILES_TRANSLATION
+        value: true
+      - key: LT_HOST
+        value: 0.0.0.0
+      - key: LT_THREADS
+        value: 4
+      - key: PYTHONUNBUFFERED
+        value: 1
