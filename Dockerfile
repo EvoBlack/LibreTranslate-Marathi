@@ -1,70 +1,44 @@
-FROM python:3.11.11-slim-bullseye
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Avoid interactive prompts during apt installs
-ARG DEBIAN_FRONTEND=noninteractive
-
 # Install minimal system dependencies
-RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends \
-        pkg-config \
-        gcc \
-        g++ \
-        curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy requirements
+COPY requirements-simple.txt requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
-COPY . .
+# Copy application files
+COPY app.py .
+COPY scripts/ scripts/
 
-# Download MarianMT model for English-Marathi translation
-RUN echo "Downloading MarianMT model..." \
-    && python scripts/download_marianmt.py \
-    && echo "Verifying model files..." \
-    && ls -lh models/en-mr-marianmt/ \
-    && test -f models/en-mr-marianmt/config.json || (echo "ERROR: Model not downloaded properly" && exit 1) \
-    && echo "✓ Model downloaded successfully"
-
-# Verify installation and model loading
-RUN echo "Verifying installation..." \
-    && python -c "import flask; print('✓ Flask:', flask.__version__)" \
-    && python -c "import transformers; print('✓ Transformers:', transformers.__version__)" \
-    && python -c "import torch; print('✓ PyTorch:', torch.__version__)" \
-    && echo "✓ Core dependencies verified"
+# Download model
+RUN python scripts/download_marianmt.py && \
+    test -f models/en-mr-marianmt/config.json || exit 1
 
 # Create non-root user
-RUN addgroup --system --gid 1032 libretranslate \
-    && adduser --system --uid 1032 --ingroup libretranslate libretranslate \
-    && chown -R libretranslate:libretranslate /app
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
 
-# Set environment variables
+USER appuser
+
+# Environment variables
 ENV PORT=5000 \
-    LT_LOAD_ONLY=en,mr \
-    LT_DISABLE_FILES_TRANSLATION=true \
-    PYTHONUNBUFFERED=1 \
-    TRANSFORMERS_OFFLINE=1 \
-    PYTHONPATH=/app
+    HOST=0.0.0.0 \
+    PYTHONUNBUFFERED=1
 
-# Make startup script executable
-RUN chmod +x start.sh
-
-# Switch to non-root user
-USER libretranslate
-
-# Expose port
 EXPOSE ${PORT}
 
-# Health check - give more time for startup
-HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=3 \
-    CMD python scripts/healthcheck.py || exit 1
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Start the application using the startup script
-CMD ["./start.sh", "--host", "0.0.0.0", "--port", "5000", "--load-only", "en,mr", "--threads", "4", "--disable-files-translation"]
+# Start application
+CMD ["python", "app.py"]

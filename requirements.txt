@@ -1,26 +1,9 @@
-# Core Flask dependencies
-Flask==2.2.5
-flask-swagger==0.2.14
-flask-swagger-ui==4.11.1
-Flask-Limiter==2.6.3
-Flask-Babel==3.1.0
-Flask-Session==0.4.0
-Babel==2.12.1
-waitress==2.1.2
-itsdangerous==2.1.2
-Werkzeug==2.3.8
-
-# Essential utilities
-expiringdict==1.2.2
-requests==2.31.0
-packaging==23.1
-
-# HuggingFace for MarianMT model
+# Minimal requirements for Marathi Translation API
+Flask==3.0.0
+flask-cors==4.0.0
 transformers==4.44.2
 torch==2.5.0
-huggingface_hub==0.35.3
 sentencepiece==0.2.0
 protobuf==4.25.3
-
-# Language detection (minimal)
-langdetect==1.0.9
+huggingface_hub==0.35.3
+waitress==2.1.2

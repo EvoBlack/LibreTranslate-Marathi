@@ -1,252 +1,238 @@
-# LibreTranslate Marathi
+# Marathi Translation API
 
-A specialized, optimized LibreTranslate service for **English ↔ Marathi** translation using HuggingFace MarianMT models.
+A lightweight, production-ready translation API for English ↔ Marathi using MarianMT models.
 
-## ✨ Features
+## Features
 
-- **🔄 Bidirectional Translation**: English ↔ Marathi with a single model
-- **🚀 High Performance**: Optimized for production deployment
-- **🎯 Focused**: Only Marathi translation - no unnecessary dependencies
-- **🐳 Docker Ready**: Containerized and ready to deploy
-- **☁️ Cloud Compatible**: Works on Render, Railway, Fly.io, etc.
-- **📦 Minimal Dependencies**: Stripped down to essentials
+- ✅ Simple REST API
+- ✅ English ↔ Marathi translation
+- ✅ Batch translation support
+- ✅ CORS enabled
+- ✅ Health check endpoint
+- ✅ Docker ready
+- ✅ Production optimized
 
-## 🌐 Supported Languages
-
-| Language | Code | Direction |
-|----------|------|-----------|
-| English  | `en` | Source & Target |
-| Marathi  | `mr` | Source & Target |
-
-## 🤖 Model Information
-
-Uses **Helsinki-NLP MarianMT** (`opus-mt-en-mr`) from HuggingFace:
-
-- ✅ High-quality neural machine translation
-- ✅ Fast CPU inference
-- ✅ Production-ready
-- ✅ Regularly updated by the community
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Local Development
 
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt
+# Install dependencies
+pip install -r requirements-simple.txt
 
-# 2. Download the model
+# Download model
 python scripts/download_marianmt.py
 
-# 3. Run the service
-python main.py --host 0.0.0.0 --port 5000
+# Run server
+python app.py
 ```
 
-The service will be available at `http://localhost:5000`
+Server will start at `http://localhost:5000`
 
 ### Docker
 
 ```bash
-# Build the image
-docker build -t libretranslate-marathi .
+# Build
+docker build -f Dockerfile-simple -t marathi-api .
 
-# Run the container
-docker run -p 5000:5000 libretranslate-marathi
+# Run
+docker run -p 5000:5000 marathi-api
 ```
 
-### Docker Compose
+### Deploy to Render
 
-```yaml
-version: '3.8'
-services:
-  translator:
-    build: .
-    ports:
-      - "5000:5000"
-    environment:
-      - PORT=5000
-      - LT_LOAD_ONLY=en,mr
-    restart: unless-stopped
-```
+1. Push code to GitHub
+2. Connect repository to Render
+3. Use `render-simple.yaml` configuration
+4. Deploy!
 
-## 📡 API Usage
+## API Endpoints
 
-### Basic Translation
+### 1. Health Check
 
 ```bash
-# English → Marathi
-curl -X POST "http://localhost:5000/translate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "q": "Hello, how are you?",
-    "source": "en",
-    "target": "mr"
-  }'
-
-# Response:
-# {
-#   "translatedText": "नमस्कार, तुम्ही कसे आहात?",
-#   "detectedLanguage": {
-#     "confidence": 100,
-#     "language": "en"
-#   }
-# }
+GET /health
 ```
 
-```bash
-# Marathi → English
-curl -X POST "http://localhost:5000/translate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "q": "नमस्कार जग",
-    "source": "mr",
-    "target": "en"
-  }'
+Response:
+```json
+{
+  "status": "healthy",
+  "model_loaded": true
+}
+```
 
-# Response:
-# {
-#   "translatedText": "Hello world",
-#   "detectedLanguage": {
-#     "confidence": 100,
-#     "language": "mr"
-#   }
-# }
+### 2. Get Languages
+
+```bash
+GET /languages
+```
+
+Response:
+```json
+[
+  {
+    "code": "en",
+    "name": "English",
+    "targets": ["mr"]
+  },
+  {
+    "code": "mr",
+    "name": "Marathi",
+    "targets": ["en"]
+  }
+]
+```
+
+### 3. Translate
+
+```bash
+POST /translate
+Content-Type: application/json
+
+{
+  "q": "Hello world",
+  "source": "en",
+  "target": "mr"
+}
+```
+
+Response:
+```json
+{
+  "translatedText": "नमस्कार जग",
+  "detectedLanguage": {
+    "confidence": 100,
+    "language": "en"
+  }
+}
 ```
 
 ### Batch Translation
 
 ```bash
-curl -X POST "http://localhost:5000/translate" \
+POST /translate
+Content-Type: application/json
+
+{
+  "q": ["Hello", "Thank you", "Good morning"],
+  "source": "en",
+  "target": "mr"
+}
+```
+
+Response:
+```json
+{
+  "translatedText": ["नमस्कार", "धन्यवाद", "सुप्रभात"],
+  "detectedLanguage": {
+    "confidence": 100,
+    "language": "en"
+  }
+}
+```
+
+## Usage Examples
+
+### cURL
+
+```bash
+curl -X POST http://localhost:5000/translate \
   -H "Content-Type: application/json" \
-  -d '{
-    "q": ["Hello", "Good morning", "Thank you"],
-    "source": "en",
-    "target": "mr"
-  }'
+  -d '{"q":"Hello","source":"en","target":"mr"}'
 ```
 
-### Get Supported Languages
+### Python
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:5000/translate",
+    json={
+        "q": "Hello world",
+        "source": "en",
+        "target": "mr"
+    }
+)
+
+print(response.json()["translatedText"])
+```
+
+### JavaScript
+
+```javascript
+fetch('http://localhost:5000/translate', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    q: 'Hello world',
+    source: 'en',
+    target: 'mr'
+  })
+})
+.then(res => res.json())
+.then(data => console.log(data.translatedText));
+```
+
+### PHP
+
+```php
+$data = [
+    'q' => 'Hello world',
+    'source' => 'en',
+    'target' => 'mr'
+];
+
+$ch = curl_init('http://localhost:5000/translate');
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$result = curl_exec($ch);
+curl_close($ch);
+
+$response = json_decode($result, true);
+echo $response['translatedText'];
+```
+
+## Testing
 
 ```bash
-curl "http://localhost:5000/languages"
+# Test locally
+python test_api.py
 
-# Response:
-# [
-#   {
-#     "code": "en",
-#     "name": "English",
-#     "targets": ["mr"]
-#   },
-#   {
-#     "code": "mr",
-#     "name": "Marathi",
-#     "targets": ["en"]
-#   }
-# ]
+# Test deployed service
+python test_api.py --url https://your-service.onrender.com
 ```
 
-## 🏗️ Architecture
+## Performance
 
-### What's Included
+- **First request**: 2-3 seconds (model warmup)
+- **Subsequent requests**: <500ms
+- **Batch translation**: ~100ms per text
+- **Memory usage**: ~2GB RAM
 
-- ✅ Flask web framework
-- ✅ HuggingFace Transformers
-- ✅ PyTorch (CPU)
-- ✅ MarianMT model
-- ✅ Language detection
-- ✅ API documentation (Swagger)
+## Error Handling
 
-### What's Removed
+All errors return JSON:
 
-- ❌ Argos Translate (not needed)
-- ❌ File translation support
-- ❌ Redis (using in-memory storage)
-- ❌ Prometheus metrics
-- ❌ Suggestions database
-- ❌ Multiple language models
-- ❌ Unnecessary locales
-
-## ⚡ Performance
-
-| Metric | Value |
-|--------|-------|
-| **Build Time** | ~5-8 minutes |
-| **Startup Time** | ~20-30 seconds |
-| **Translation Speed** | ~100-500 words/sec |
-| **Memory Usage** | ~2-3 GB RAM |
-| **Docker Image Size** | ~3-4 GB |
-
-## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# Port configuration
-PORT=5000
-
-# Language restriction
-LT_LOAD_ONLY=en,mr
-
-# Disable features
-LT_DISABLE_FILES_TRANSLATION=true
-LT_DISABLE_WEB_UI=false
-
-# Performance
-LT_THREADS=4
+```json
+{
+  "error": "Error message"
+}
 ```
 
-### Command Line Options
+Status codes:
+- `200`: Success
+- `400`: Bad request (missing parameters)
+- `500`: Server error
+- `503`: Service unavailable (model not loaded)
 
-```bash
-python main.py \
-  --host 0.0.0.0 \
-  --port 5000 \
-  --load-only en,mr \
-  --threads 4 \
-  --disable-files-translation
-```
+## Environment Variables
 
-## 🐛 Troubleshooting
+- `PORT`: Server port (default: 5000)
+- `HOST`: Server host (default: 0.0.0.0)
 
-### Model Not Found
+## License
 
-```bash
-# Download the model manually
-python scripts/download_marianmt.py
-```
-
-### Out of Memory
-
-```bash
-# Reduce threads
-python main.py --threads 2
-
-# Or use Docker with memory limit
-docker run -m 4g -p 5000:5000 libretranslate-marathi
-```
-
-### Slow Translations
-
-- Ensure you're using CPU-optimized PyTorch
-- Reduce batch size
-- Increase thread count (if you have CPU cores available)
-
-## 📝 License
-
-AGPL v3 - Same as LibreTranslate
-
-## 🙏 Credits
-
-- [LibreTranslate](https://github.com/LibreTranslate/LibreTranslate) - Original project
-- [Helsinki-NLP](https://huggingface.co/Helsinki-NLP) - MarianMT models
-- [HuggingFace](https://huggingface.co/) - Model hosting and transformers library
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📧 Support
-
-For issues and questions:
-- Open an issue on GitHub
-- Check existing issues for solutions
+AGPL v3
