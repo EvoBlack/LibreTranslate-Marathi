@@ -33,16 +33,13 @@ RUN echo "Downloading MarianMT model..." \
     && test -f models/en-mr-marianmt/config.json || (echo "ERROR: Model not downloaded properly" && exit 1) \
     && echo "✓ Model downloaded successfully"
 
-# Install the package
-RUN pip install --no-cache-dir -e .
-
-# Verify installation and model loading
+# Verify installation and model loading (no need to install package, we'll use PYTHONPATH)
 RUN echo "Verifying installation..." \
     && python -c "import flask; print('✓ Flask:', flask.__version__)" \
     && python -c "import transformers; print('✓ Transformers:', transformers.__version__)" \
     && python -c "import torch; print('✓ PyTorch:', torch.__version__)" \
-    && python -c "from libretranslate.language import load_languages; langs = load_languages(); print('✓ Languages:', [l.code for l in langs])" \
-    && python -c "from libretranslate import hf_adapter; pipe = hf_adapter._load_pipeline(); print('✓ Model pipeline loaded')" \
+    && python -c "import sys; sys.path.insert(0, '/app'); from libretranslate.language import load_languages; langs = load_languages(); print('✓ Languages:', [l.code for l in langs])" \
+    && python -c "import sys; sys.path.insert(0, '/app'); from libretranslate import hf_adapter; pipe = hf_adapter._load_pipeline(); print('✓ Model pipeline loaded')" \
     && echo "✓ All verifications passed"
 
 # Create non-root user
@@ -55,7 +52,8 @@ ENV PORT=5000 \
     LT_LOAD_ONLY=en,mr \
     LT_DISABLE_FILES_TRANSLATION=true \
     PYTHONUNBUFFERED=1 \
-    TRANSFORMERS_OFFLINE=1
+    TRANSFORMERS_OFFLINE=1 \
+    PYTHONPATH=/app
 
 # Make startup script executable
 RUN chmod +x start.sh
