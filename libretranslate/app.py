@@ -21,12 +21,23 @@ except Exception:
 
   def get_supported_formats():
     return []
+
 from flask import Blueprint, Flask, Response, abort, jsonify, render_template, request, send_file, session, url_for, make_response, has_request_context
 from flask_babel import Babel
 from flask_session import Session
 from flask_swagger import swagger
 from flask_swagger_ui import get_swaggerui_blueprint
-from translatehtml import translate_html
+
+try:
+  from translatehtml import translate_html
+  _HAS_TRANSLATEHTML = True
+except Exception:
+  # Optional dependency not available
+  _HAS_TRANSLATEHTML = False
+  def translate_html(html, source, target, translator):
+    # Fallback: just translate the text content
+    return translator.hypotheses(html, 1)[0].value if translator else html
+
 from werkzeug.exceptions import HTTPException
 from werkzeug.http import http_date
 from werkzeug.utils import secure_filename

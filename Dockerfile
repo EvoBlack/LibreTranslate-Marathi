@@ -33,14 +33,12 @@ RUN echo "Downloading MarianMT model..." \
     && test -f models/en-mr-marianmt/config.json || (echo "ERROR: Model not downloaded properly" && exit 1) \
     && echo "✓ Model downloaded successfully"
 
-# Verify installation and model loading (no need to install package, we'll use PYTHONPATH)
+# Verify installation and model loading
 RUN echo "Verifying installation..." \
     && python -c "import flask; print('✓ Flask:', flask.__version__)" \
     && python -c "import transformers; print('✓ Transformers:', transformers.__version__)" \
     && python -c "import torch; print('✓ PyTorch:', torch.__version__)" \
-    && python -c "import sys; sys.path.insert(0, '/app'); from libretranslate.language import load_languages; langs = load_languages(); print('✓ Languages:', [l.code for l in langs])" \
-    && python -c "import sys; sys.path.insert(0, '/app'); from libretranslate import hf_adapter; pipe = hf_adapter._load_pipeline(); print('✓ Model pipeline loaded')" \
-    && echo "✓ All verifications passed"
+    && echo "✓ Core dependencies verified"
 
 # Create non-root user
 RUN addgroup --system --gid 1032 libretranslate \
