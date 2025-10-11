@@ -1,5 +1,11 @@
-import redis
 import time
+
+try:
+    import redis
+    _HAS_REDIS = True
+except ImportError:
+    _HAS_REDIS = False
+    redis = None
 
 storage = None
 def get_storage():
@@ -113,6 +119,8 @@ class MemoryStorage(Storage):
 
 class RedisStorage(Storage):
     def __init__(self, redis_uri):
+        if not _HAS_REDIS:
+            raise Exception("Redis is not installed. Install with: pip install redis")
         self.conn = redis.from_url(redis_uri)
         self.conn.ping()
 
