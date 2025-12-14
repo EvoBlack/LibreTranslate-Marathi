@@ -1,4 +1,4 @@
-# Minimal requirements for Marathi Translation API
+# Requirements for Marathi Translation API with IndicTrans2
 Flask==3.0.0
 flask-cors==4.0.0
 transformers==4.44.2
@@ -7,3 +7,5 @@ sentencepiece==0.2.0
 protobuf==4.25.3
 huggingface_hub==0.35.3
 waitress==2.1.2
+indic-nlp-library==0.92
+sacremoses==0.1.1

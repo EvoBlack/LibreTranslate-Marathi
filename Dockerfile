@@ -17,11 +17,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application files
 COPY app.py .
+COPY translations_dict.json .
 COPY scripts/ scripts/
 
-# Download model
-RUN python scripts/download_marianmt.py && \
-    test -f models/en-mr-marianmt/config.json || exit 1
+# Download IndicTrans2 model
+RUN python scripts/download_indictrans2.py && \
+    test -f models/indictrans2-en-mr/config.json || exit 1
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && \
@@ -30,11 +31,11 @@ RUN useradd -m -u 1000 appuser && \
 USER appuser
 
 # Environment variables
-ENV PORT=5000 \
+ENV PORT=7860 \
     HOST=0.0.0.0 \
     PYTHONUNBUFFERED=1
 
-EXPOSE ${PORT}
+EXPOSE 7860
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

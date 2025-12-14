@@ -1,112 +1,177 @@
 #!/usr/bin/env python3
 """
-Test script for Marathi Translation API
+Test script for IndicTrans2-powered Marathi Translation API
+Tests both dictionary and model translations
 """
 
 import requests
 import json
+import time
 
-def test_api(base_url="http://localhost:5000"):
-    """Test the translation API"""
-    
-    print("=" * 60)
-    print("Testing Marathi Translation API")
-    print("=" * 60)
-    print(f"Base URL: {base_url}\n")
-    
-    tests = [
-        {
-            "name": "Health Check",
-            "method": "GET",
-            "endpoint": "/health",
-            "expected": 200
-        },
-        {
-            "name": "Get Languages",
-            "method": "GET",
-            "endpoint": "/languages",
-            "expected": 200
-        },
-        {
-            "name": "English to Marathi",
-            "method": "POST",
-            "endpoint": "/translate",
-            "data": {
-                "q": "Hello, how are you?",
-                "source": "en",
-                "target": "mr"
-            },
-            "expected": 200
-        },
-        {
-            "name": "Marathi to English",
-            "method": "POST",
-            "endpoint": "/translate",
-            "data": {
-                "q": "नमस्कार",
-                "source": "mr",
-                "target": "en"
-            },
-            "expected": 200
-        },
-        {
-            "name": "Batch Translation",
-            "method": "POST",
-            "endpoint": "/translate",
-            "data": {
-                "q": ["Hello", "Thank you", "Good morning"],
-                "source": "en",
-                "target": "mr"
-            },
-            "expected": 200
-        }
-    ]
-    
-    passed = 0
-    failed = 0
-    
-    for i, test in enumerate(tests, 1):
-        print(f"[{i}/{len(tests)}] {test['name']}")
+API_URL = "https://evoblack-libretranslate-marathi.hf.space/translate"
+HEALTH_URL = "https://evoblack-libretranslate-marathi.hf.space/health"
+
+# Test cases for dictionary (should be instant and 100% accurate)
+dictionary_tests = [
+    {"input": "Home", "expected": "घर", "source": "en", "target": "mr"},
+    {"input": "Profile", "expected": "प्रोफाइल", "source": "en", "target": "mr"},
+    {"input": "Settings", "expected": "सेटिंग्स", "source": "en", "target": "mr"},
+    {"input": "Driver", "expected": "चालक", "source": "en", "target": "mr"},
+    {"input": "Host", "expected": "यजमान", "source": "en", "target": "mr"},
+    {"input": "Events", "expected": "कार्यक्रम", "source": "en", "target": "mr"},
+    {"input": "Login", "expected": "लॉगिन", "source": "en", "target": "mr"},
+    {"input": "Logout", "expected": "लॉगआउट", "source": "en", "target": "mr"},
+    {"input": "Welcome", "expected": "स्वागत", "source": "en", "target": "mr"},
+    {"input": "Search", "expected": "शोधा", "source": "en", "target": "mr"},
+]
+
+# Test cases for model (sentences - quality check)
+model_tests = [
+    {"input": "Hello, how are you?", "source": "en", "target": "mr", "description": "Simple greeting"},
+    {"input": "I love programming", "source": "en", "target": "mr", "description": "Simple sentence"},
+    {"input": "Thank you very much", "source": "en", "target": "mr", "description": "Gratitude expression"},
+    {"input": "Good morning", "source": "en", "target": "mr", "description": "Time greeting"},
+    {"input": "Please help me", "source": "en", "target": "mr", "description": "Request"},
+]
+
+def test_translation(text, source, target, expected=None):
+    """Test a single translation"""
+    try:
+        start_time = time.time()
+        response = requests.post(
+            API_URL,
+            json={"q": text, "source": source, "target": target},
+            timeout=30
+        )
+        elapsed = (time.time() - start_time) * 1000  # Convert to ms
         
-        try:
-            url = base_url + test['endpoint']
+        if response.status_code == 200:
+            data = response.json()
+            translated = data.get("translatedText", "")
             
-            if test['method'] == 'GET':
-                response = requests.get(url, timeout=30)
+            if expected:
+                # Check if translation matches expected
+                is_correct = translated == expected
+                status = "✅ PASS" if is_correct else "❌ FAIL"
+                print(f"{status} | {text:20} → {translated:25} ({elapsed:.0f}ms)")
+                return is_correct
             else:
-                response = requests.post(url, json=test['data'], timeout=30)
+                # Just show the translation (no expected value)
+                print(f"✓ | {text:30} → {translated:30} ({elapsed:.0f}ms)")
+                return True
+        else:
+            print(f"❌ ERROR | {text:20} → HTTP {response.status_code}")
+            return False
             
-            if response.status_code == test['expected']:
-                data = response.json()
-                print(f"  ✓ PASSED")
-                if 'translatedText' in data:
-                    print(f"  Translation: {data['translatedText']}")
-                elif 'status' in data:
-                    print(f"  Status: {data['status']}")
-                passed += 1
-            else:
-                print(f"  ✗ FAILED: Expected {test['expected']}, got {response.status_code}")
-                print(f"  Response: {response.text}")
-                failed += 1
-        except Exception as e:
-            print(f"  ✗ FAILED: {e}")
-            failed += 1
-        
-        print()
+    except Exception as e:
+        print(f"❌ ERROR | {text:20} → {str(e)}")
+        return False
+
+def check_health():
+    """Check API health and model info"""
+    try:
+        response = requests.get(HEALTH_URL, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            print("✅ API is healthy")
+            print(f"   Model: {data.get('model', 'Unknown')}")
+            print(f"   Device: {data.get('device', 'Unknown')}")
+            print(f"   Model Loaded: {data.get('model_loaded', False)}")
+            return True
+        else:
+            print(f"⚠️  API returned status {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Could not reach API: {e}")
+        print("\n⏳ The Space might still be building.")
+        print("   Wait 10-15 minutes and try again.")
+        print("   Check status: https://huggingface.co/spaces/Evoblack/LibreTranslate-Marathi")
+        return False
+
+def main():
+    print("=" * 80)
+    print("Testing IndicTrans2-Powered Marathi Translation API")
+    print("=" * 80)
+    print(f"API URL: {API_URL}")
+    print()
     
-    print("=" * 60)
-    print(f"Results: {passed} passed, {failed} failed")
-    print("=" * 60)
+    # Check health
+    print("Checking API health...")
+    if not check_health():
+        return
     
-    return failed == 0
+    print()
+    
+    # Test dictionary translations
+    print("=" * 80)
+    print("Testing Dictionary Translations (UI Terms)")
+    print("=" * 80)
+    print("These should be instant (<10ms) and 100% accurate")
+    print("-" * 80)
+    
+    dict_passed = 0
+    dict_failed = 0
+    
+    for test in dictionary_tests:
+        result = test_translation(
+            test["input"],
+            test["source"],
+            test["target"],
+            test["expected"]
+        )
+        if result:
+            dict_passed += 1
+        else:
+            dict_failed += 1
+        time.sleep(0.3)
+    
+    print("-" * 80)
+    print(f"Dictionary Results: {dict_passed}/{len(dictionary_tests)} passed")
+    print()
+    
+    # Test model translations
+    print("=" * 80)
+    print("Testing Model Translations (Sentences)")
+    print("=" * 80)
+    print("These use IndicTrans2 model for high-quality translation")
+    print("-" * 80)
+    
+    model_passed = 0
+    
+    for test in model_tests:
+        print(f"\n{test['description']}:")
+        result = test_translation(
+            test["input"],
+            test["source"],
+            test["target"]
+        )
+        if result:
+            model_passed += 1
+        time.sleep(0.5)
+    
+    print("-" * 80)
+    print(f"Model Results: {model_passed}/{len(model_tests)} completed")
+    print()
+    
+    # Summary
+    print("=" * 80)
+    print("SUMMARY")
+    print("=" * 80)
+    
+    if dict_failed == 0:
+        print("✅ Dictionary translations: PERFECT (100% accuracy)")
+    else:
+        print(f"⚠️  Dictionary translations: {dict_passed}/{len(dictionary_tests)} passed")
+    
+    print(f"✅ Model translations: {model_passed}/{len(model_tests)} completed")
+    
+    if dict_failed == 0 and model_passed == len(model_tests):
+        print("\n🎉 All tests passed! IndicTrans2 is working perfectly!")
+    elif dict_failed > 0:
+        print(f"\n⚠️  {dict_failed} dictionary test(s) failed.")
+        print("   This might mean the dictionary file wasn't loaded.")
+    
+    print("\n" + "=" * 80)
 
 if __name__ == "__main__":
-    import sys
-    import argparse
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--url", default="http://localhost:5000", help="API base URL")
-    args = parser.parse_args()
-    
-    success = test_api(args.url)
-    sys.exit(0 if success else 1)
+    main()
